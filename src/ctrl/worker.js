@@ -80,7 +80,7 @@ function tab_close(type) {
 
 function hist_page_url(year, page) {
     return (
-        'https://www.amazon.co.jp/gp/your-account/order-history/?orderFilter=year-' +
+        'https://www.amazon.co.jp/your-orders/orders?timeFilter=year-' +
         year +
         '&startIndex=' +
         (page - 1) * 10

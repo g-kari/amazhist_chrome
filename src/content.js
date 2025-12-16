@@ -244,6 +244,7 @@ function order_detail_page_parse_normal() {
                 (j + 1) +
                 ']'
             item = order_item_page_parse(parent_xpath)
+            item['category'] = 'physical'
             item_list.push(item)
         }
     }
@@ -251,6 +252,27 @@ function order_detail_page_parse_normal() {
     return {
         list: item_list
     }
+}
+
+function is_kindle_item(item) {
+    // 商品名やURLにKindle関連のキーワードが含まれているか判定
+    const kindle_keywords = ['kindle', 'Kindle', 'KINDLE', 'Kindle版', '電子書籍']
+    const name_lower = (item.name || '').toLowerCase()
+    const url_lower = (item.url || '').toLowerCase()
+
+    for (const keyword of kindle_keywords) {
+        if (name_lower.includes(keyword.toLowerCase()) || url_lower.includes(keyword.toLowerCase())) {
+            return true
+        }
+    }
+
+    // ASINがBで始まる場合は書籍（Kindleを含む）の可能性が高い
+    if (item.asin && item.asin.startsWith('B')) {
+        // デジタル注文でASINがBで始まる場合はKindleの可能性が高い
+        return true
+    }
+
+    return false
 }
 
 function order_detail_page_parse_digital() {
@@ -272,6 +294,8 @@ function order_detail_page_parse_digital() {
             (i + 1) +
             ']'
         item = order_item_page_parse(parent_xpath)
+        // Kindleかどうかを判定してカテゴリを設定
+        item['category'] = is_kindle_item(item) ? 'kindle' : 'digital'
         item_list.push(item)
     }
 

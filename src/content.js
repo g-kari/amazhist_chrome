@@ -26,7 +26,7 @@ function print_stacktrace(e) {
 }
 
 function year_list_page_parse() {
-    year_list = []
+    let year_list = []
 
     // Try modern selector first (#time-filter), then fall back to legacy (#orderFilter)
     let year_selector = document.querySelector('#time-filter')
@@ -84,7 +84,7 @@ function order_count_page_parse() {
     }
 
     const order_count_text = order_count_element.innerText.trim()
-    const order_count = parseInt(order_count_text.replace('件', '').replace(',', ''))
+    const order_count = parseInt(order_count_text.replace('件', '').replace(',', '')) || 0
 
     return {
         count: order_count
@@ -107,7 +107,7 @@ function order_list_page_parse() {
 
     log.info({ order_count: order_cards.length })
 
-    detail_page_list = []
+    let detail_page_list = []
 
     order_cards.forEach((order_card, index) => {
         try {
@@ -168,8 +168,7 @@ function order_list_page_parse() {
     })
 
     // Check if this is the last page
-    const is_last = !document.querySelector('ul.a-pagination li.a-last a') &&
-                    document.xpath('count(//ul[contains(@class, "a-pagination")]/li[contains(@class, "a-last")]/a)') == 0
+    const is_last = !document.querySelector('ul.a-pagination li.a-last a')
 
     return {
         list: detail_page_list,

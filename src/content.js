@@ -84,8 +84,7 @@ function order_count_page_parse() {
     }
 
     const order_count_text = order_count_element.innerText.trim()
-    const order_count = parseInt(order_count_text.replace('件', '').replace(',', '')) || 0
-
+    const order_count = parseInt(order_count_text.replace('件', '').replace(/,/g, '')) || 0
     return {
         count: order_count
     }

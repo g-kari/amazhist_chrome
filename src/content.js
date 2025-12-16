@@ -28,21 +28,30 @@ function print_stacktrace(e) {
 function year_list_page_parse() {
     year_list = []
 
-    const year_count = document.xpath(
-        'count(//span[contains(@class, "a-dropdown-container")]//option[contains(@id, "orderFilterEntry-year")])'
-    )
-
-    for (var i = 0; i < year_count; i++) {
-        const year_text = document
-            .xpath(
-                '//span[contains(@class, "a-dropdown-container")]//option[contains(@id, "orderFilterEntry-year")][' +
-                    (i + 1) +
-                    ']'
-            )[0]
-            .innerText.trim()
-
-        year_list.push(parseInt(year_text.replace('年', '')))
+    // Try modern selector first (#time-filter), then fall back to legacy (#orderFilter)
+    let year_selector = document.querySelector('#time-filter')
+    if (!year_selector) {
+        year_selector = document.querySelector('#orderFilter')
     }
+
+    if (!year_selector) {
+        log.error('Year filter selector not found')
+        return { list: [] }
+    }
+
+    const options = year_selector.querySelectorAll('option')
+
+    options.forEach(option => {
+        const year_text = option.innerText.trim()
+        // Match patterns like "2024年", "2024", or extract year from text
+        const year_match = year_text.match(/(\d{4})/)
+        if (year_match) {
+            const year = parseInt(year_match[1])
+            if (year >= 1900 && year <= 2100) {
+                year_list.push(year)
+            }
+        }
+    })
 
     return {
         list: year_list
@@ -50,11 +59,32 @@ function year_list_page_parse() {
 }
 
 function order_count_page_parse() {
-    const order_count_text = document
-        .xpath('//label[@for="orderFilter"]//span[contains(@class, "num-orders")]')[0]
-        .innerText.trim()
+    // Try multiple selectors for order count
+    let order_count_element = document.querySelector('.num-orders')
 
-    const order_count = parseInt(order_count_text.replace('件', ''))
+    if (!order_count_element) {
+        // Fallback to xpath
+        const xpath_result = document.xpath('//label[@for="orderFilter"]//span[contains(@class, "num-orders")]')
+        if (xpath_result && xpath_result.length > 0) {
+            order_count_element = xpath_result[0]
+        }
+    }
+
+    if (!order_count_element) {
+        // Try alternative selector for time-filter
+        const xpath_result2 = document.xpath('//label[@for="time-filter"]//span[contains(@class, "num-orders")]')
+        if (xpath_result2 && xpath_result2.length > 0) {
+            order_count_element = xpath_result2[0]
+        }
+    }
+
+    if (!order_count_element) {
+        log.error('Order count element not found')
+        return { count: 0 }
+    }
+
+    const order_count_text = order_count_element.innerText.trim()
+    const order_count = parseInt(order_count_text.replace('件', '').replace(',', ''))
 
     return {
         count: order_count
@@ -62,24 +92,84 @@ function order_count_page_parse() {
 }
 
 function order_list_page_parse() {
-    const order_count = document.xpath('count(//div[contains(@class, " order ")])')
-    log.info({ order_count: order_count })
+    // Try modern selector first, then fall back to legacy
+    let order_cards = document.querySelectorAll('.js-order-card')
+
+    if (order_cards.length === 0) {
+        // Fallback to legacy selector
+        order_cards = document.querySelectorAll('div.order')
+    }
+
+    if (order_cards.length === 0) {
+        // Try XPath as last resort
+        order_cards = document.xpath('//div[contains(@class, " order ")]')
+    }
+
+    log.info({ order_count: order_cards.length })
 
     detail_page_list = []
-    for (var i = 0; i < order_count; i++) {
-        const parent_xpath = '//div[contains(@class, " order ")][' + (i + 1) + ']'
-        const date = document
-            .xpath(parent_xpath + '//div[contains(@class, "order-info")] // span[contains(@class, "value")]')[0]
-            .innerText.trim()
-        const url = document.xpath(parent_xpath + '//a[contains(text(), "注文内容を表示")]')[0].href
 
-        detail_page_list.push({
-            date: date.replace('年', '/').replace('月', '/').replace('日', ''), // 雑だけど動く
-            url: url
-        })
-    }
-    const is_last =
-        document.xpath('count(//ul[contains(@class, "a-pagination")]/li[contains(@class, "a-last")]/a)') == 0
+    order_cards.forEach((order_card, index) => {
+        try {
+            // Try to find date element with multiple selectors
+            let date_element = order_card.querySelector('.order-info .value')
+            if (!date_element) {
+                date_element = order_card.querySelector('.a-col-left .a-span3 .a-row:last-child .a-color-secondary')
+            }
+            if (!date_element) {
+                // Try xpath within this order card
+                const xpath_date = document.evaluate(
+                    './/div[contains(@class, "order-info")]//span[contains(@class, "value")]',
+                    order_card,
+                    null,
+                    XPathResult.FIRST_ORDERED_NODE_TYPE,
+                    null
+                )
+                if (xpath_date.singleNodeValue) {
+                    date_element = xpath_date.singleNodeValue
+                }
+            }
+
+            // Try to find order detail link with multiple selectors
+            let detail_link = order_card.querySelector('a[href*="order-details"]')
+            if (!detail_link) {
+                detail_link = Array.from(order_card.querySelectorAll('a')).find(a =>
+                    a.textContent.includes('注文内容を表示') ||
+                    a.textContent.includes('View order details') ||
+                    a.href.includes('order-details')
+                )
+            }
+            if (!detail_link) {
+                // Try xpath within this order card
+                const xpath_link = document.evaluate(
+                    './/a[contains(text(), "注文内容を表示") or contains(@href, "order-details")]',
+                    order_card,
+                    null,
+                    XPathResult.FIRST_ORDERED_NODE_TYPE,
+                    null
+                )
+                if (xpath_link.singleNodeValue) {
+                    detail_link = xpath_link.singleNodeValue
+                }
+            }
+
+            if (date_element && detail_link) {
+                const date = date_element.innerText.trim()
+                detail_page_list.push({
+                    date: date.replace('年', '/').replace('月', '/').replace('日', ''), // 雑だけど動く
+                    url: detail_link.href
+                })
+            } else {
+                log.warn(`Order ${index + 1}: Could not find date or detail link`)
+            }
+        } catch (e) {
+            log.error(`Error parsing order ${index + 1}:`, e.message)
+        }
+    })
+
+    // Check if this is the last page
+    const is_last = !document.querySelector('ul.a-pagination li.a-last a') &&
+                    document.xpath('count(//ul[contains(@class, "a-pagination")]/li[contains(@class, "a-last")]/a)') == 0
 
     return {
         list: detail_page_list,

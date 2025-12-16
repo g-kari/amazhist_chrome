@@ -257,11 +257,12 @@ function order_detail_page_parse_normal() {
 function is_kindle_item(item) {
     // 商品名やURLにKindle関連のキーワードが含まれているか判定
     const kindle_keywords = ['kindle', 'Kindle', 'KINDLE', 'Kindle版', '電子書籍']
+    const kindle_keywords_lower = kindle_keywords.map(k => k.toLowerCase())
     const name_lower = (item.name || '').toLowerCase()
     const url_lower = (item.url || '').toLowerCase()
 
-    for (const keyword of kindle_keywords) {
-        if (name_lower.includes(keyword.toLowerCase()) || url_lower.includes(keyword.toLowerCase())) {
+    for (const keyword_lower of kindle_keywords_lower) {
+        if (name_lower.includes(keyword_lower) || url_lower.includes(keyword_lower)) {
             return true
         }
     }

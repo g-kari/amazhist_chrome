@@ -47,7 +47,7 @@ function year_list_page_parse() {
         const year_match = year_text.match(/(\d{4})/)
         if (year_match) {
             const year = parseInt(year_match[1])
-            if (year >= 1900 && year <= 2100) {
+            if (year >= 1900 && year <= new Date().getFullYear() + 1) {
                 year_list.push(year)
             }
         }

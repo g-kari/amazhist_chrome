@@ -10,7 +10,12 @@ function state_init() {
         count_total: 0,
         count_done: 0,
         price_total: 0,
-        by_year: {}
+        by_year: {},
+        by_category: {
+            kindle: { count: 0, price: 0 },
+            digital: { count: 0, price: 0 },
+            physical: { count: 0, price: 0 }
+        }
     }
 
     document.getElementById('status').value = ''
@@ -31,6 +36,15 @@ function notify_progress() {
     document.getElementById('order_count_done').innerText = order_info['count_done'].toLocaleString()
     document.getElementById('order_count_total').innerText = order_info['count_total'].toLocaleString()
     document.getElementById('order_price_total').innerText = order_info['price_total'].toLocaleString()
+
+    // カテゴリ別の表示を更新
+    const cat = order_info['by_category']
+    document.getElementById('category_kindle_price').innerText = cat['kindle']['price'].toLocaleString()
+    document.getElementById('category_kindle_count').innerText = cat['kindle']['count'].toLocaleString()
+    document.getElementById('category_digital_price').innerText = cat['digital']['price'].toLocaleString()
+    document.getElementById('category_digital_count').innerText = cat['digital']['count'].toLocaleString()
+    document.getElementById('category_physical_price').innerText = cat['physical']['price'].toLocaleString()
+    document.getElementById('category_physical_count').innerText = cat['physical']['count'].toLocaleString()
 
     var done_rate
     if (order_info['count_done'] == 0) {
@@ -98,6 +112,7 @@ function csv_convert(item_list) {
     param_list = [
         ['date', '購入日'],
         ['name', '名前'],
+        ['category', 'カテゴリ'],
         ['quantity', '数量'],
         ['price', '価格'],
         ['seller', '販売元'],
@@ -178,6 +193,14 @@ function get_detail_in_order(order, index, mode, year, callback) {
                 item_list.push(item)
                 order_info['price_total'] += item['price']
                 order_info['by_year']['price'][year_index(year)] += item['price']
+
+                // カテゴリ別の集計
+                const category = item['category'] || 'physical'
+                if (order_info['by_category'][category]) {
+                    order_info['by_category'][category]['count'] += item['quantity'] || 1
+                    order_info['by_category'][category]['price'] += item['price']
+                }
+
                 chart_order_update()
             }
             notify_progress()

@@ -267,12 +267,6 @@ function is_kindle_item(item) {
         }
     }
 
-    // ASINがBで始まる場合は書籍（Kindleを含む）の可能性が高い
-    if (item.asin && item.asin.startsWith('B')) {
-        // デジタル注文でASINがBで始まる場合はKindleの可能性が高い
-        return true
-    }
-
     return false
 }
 
